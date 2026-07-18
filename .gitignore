@@ -1,0 +1,42 @@
+# Never commit VM images or large binaries; host them externally and link from the README.
+*.ova
+*.ovf
+*.vmdk
+*.vmem
+*.vmss
+*.vmsd
+*.vmx
+*.vmxf
+*.nvram
+*.iso
+*.log
+*.scoreboard
+*.lck/
+
+# Private keys / secrets, never commit (this box's whole theme is SSH keys)
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.pem
+*.key
+*.ppk
+*_rsa
+*_ed25519
+
+# Build secrets & outputs: never commit
+ansible/secrets.yml
+build/ansible/secrets.yml
+**/secrets.yml
+build/packer/output-*/
+build/packer/*.ova
+build/packer/build.pkrvars.hcl
+build/packer/packer_cache/
+.vagrant/
+
+# Attacker artifacts you might drop in while writing the walkthrough
+nmap/
+loot/
+*.nmap
+*.gnmap
+*.xml

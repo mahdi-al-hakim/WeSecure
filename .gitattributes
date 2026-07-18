@@ -1,0 +1,19 @@
+# Normalize line endings: the build runs on Linux; CRLF would break shell shebangs.
+* text=auto eol=lf
+*.sh   text eol=lf
+*.c    text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.j2   text eol=lf
+*.ps   text eol=lf
+*.hcl  text eol=lf
+user-data   text eol=lf
+meta-data   text eol=lf
+
+# Binary assets (should never be committed here, but be explicit)
+*.ova binary
+*.vmdk binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pdf binary
