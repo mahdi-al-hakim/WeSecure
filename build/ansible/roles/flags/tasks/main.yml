@@ -1,0 +1,18 @@
+---
+- name: Plant user flag (world-readable after foothold)
+  ansible.builtin.copy:
+    dest: /home/john/user.txt
+    content: "{{ user_flag }}\n"
+    owner: root
+    group: john
+    mode: "0644"
+  no_log: true
+
+- name: Plant root flag (root only)
+  ansible.builtin.copy:
+    dest: /root/root.txt
+    content: "{{ root_flag }}\n"
+    owner: root
+    group: root
+    mode: "0640"
+  no_log: true

@@ -1,0 +1,80 @@
+---
+# NOTE: the username `mmcarTney+0` contains a '+', which Ubuntu's default
+# useradd NAME_REGEX rejects and the ansible.builtin.user module can't override,
+# so we create accounts with `useradd --badname` and set passwords via chpasswd.
+# (Ubuntu 24.04 shadow-utils uses the singular `--badname`.)
+- name: Create challenge users (fixed uids; --badname allows the '+' in the name)
+  ansible.builtin.command:
+    cmd: "useradd --badname -u {{ item.uid }} -m -s /bin/bash -c \"{{ item.comment }}\" \"{{ item.name }}\""
+  register: ucreate
+  changed_when: ucreate.rc == 0
+  failed_when:
+    - ucreate.rc != 0
+    - "'already exists' not in (ucreate.stderr | default(''))"
+  loop: "{{ users }}"
+
+- name: Set account passwords (chpasswd handles the '+' username)
+  ansible.builtin.shell:
+    cmd: "echo {{ (item.name ~ ':' ~ item.pw) | quote }} | chpasswd"
+  loop:
+    - { name: "john",        pw: "{{ pw_john }}" }
+    - { name: "mmcarTney+0", pw: "{{ pw_mmcartney }}" }
+    - { name: "root_2fa",    pw: "{{ pw_root_2fa }}" }
+    - { name: "root",        pw: "{{ pw_root }}" }
+  no_log: true
+  changed_when: true
+
+# --- 2FA gate: interactive root shells are dropped to root_2fa. Real root only
+#     comes from the intended cron->.escape chain (or `su root -c`, non-interactive). ---
+- name: Install root->root_2fa 2FA gate
+  ansible.builtin.blockinfile:
+    path: /root/.bashrc
+    create: true
+    marker: "# {mark} WESECURE 2FA GATE"
+    block: |
+      if [[ $- == *i* ]] && [[ -z "$WESECURE_2FA" ]]; then
+          export WESECURE_2FA=1
+          exec runuser -u root_2fa -- /bin/bash -l
+      fi
+
+# --- .escape SUID binary (compiled from source) ---
+- name: Copy .escape source (drop your real escape.c into roles/users/files/ to override)
+  ansible.builtin.copy:
+    src: escape.c
+    dest: /tmp/escape.c
+    mode: "0644"
+
+- name: Compile .escape
+  ansible.builtin.command: gcc -O2 -o /home/root_2fa/.escape /tmp/escape.c
+  args:
+    creates: /home/root_2fa/.escape
+
+- name: Set .escape ownership + SUID (---s--x--x root:root_2fa)
+  ansible.builtin.file:
+    path: /home/root_2fa/.escape
+    owner: root
+    group: root_2fa
+    mode: "04111"
+
+- name: Remove .escape source from target
+  ansible.builtin.file:
+    path: /tmp/escape.c
+    state: absent
+
+# --- the escape passkey, readable by www-data (HTTP symlink disclosure vector) ---
+- name: Plant /etc/.esc-key
+  ansible.builtin.copy:
+    dest: /etc/.esc-key
+    content: "{{ esc_passkey }}\n"
+    owner: root
+    group: root
+    mode: "0640"
+  no_log: true
+
+- name: Grant www-data read ACL on /etc/.esc-key
+  ansible.posix.acl:
+    path: /etc/.esc-key
+    entity: www-data
+    etype: user
+    permissions: r
+    state: present

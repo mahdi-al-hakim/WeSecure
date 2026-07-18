@@ -1,0 +1,26 @@
+#cloud-config
+# Ubuntu 24.04 autoinstall seed for the Packer build box.
+# Creates a throwaway `ubuntu`/`ubuntu` admin used only during the build; the
+# Ansible run and cleanup remove build traces afterward.
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  storage:
+    layout:
+      name: lvm
+  identity:
+    hostname: wesecure-build
+    username: ubuntu
+    # SHA-512 crypt of "ubuntu" (regenerate with:  openssl passwd -6 ubuntu)
+    password: "$6$U1rw96xBdFGr6dna$doPIYy18x//6LZMha/vEjjWTvEoYAOAnAomfKD6wYaIlvjrQ6k4F0X64ffs8Wb19FOpoXvxopRK0.bu9KkTe/"
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - python3
+    - sudo
+  late-commands:
+    - echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu
+    - curtin in-target --target=/target -- chmod 440 /etc/sudoers.d/ubuntu

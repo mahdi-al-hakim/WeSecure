@@ -1,0 +1,43 @@
+---
+- name: Create /opt/sysutils and checksum dir
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /opt/sysutils
+    - "{{ checksum_dir }}"
+
+- name: Install verification + monitor scripts
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - { src: verified_run.sh,   dest: /opt/sysutils/verified_run.sh }
+    - { src: setup_checksums.sh, dest: /opt/sysutils/setup_checksums.sh }
+    - { src: monitor.sh,         dest: /usr/local/bin/monitor.sh }
+
+- name: Generate the CRC32 checksum store (must reflect the shipped binaries)
+  ansible.builtin.command: /opt/sysutils/setup_checksums.sh
+  args:
+    creates: "{{ checksum_dir }}/grep.txt"
+
+- name: Install the cron job (root_2fa runs verified_run every minute)
+  ansible.builtin.lineinfile:
+    path: /etc/crontab
+    line: "* * * * * root_2fa /opt/sysutils/verified_run.sh --exec=/usr/local/bin/monitor.sh"
+    state: present
+
+# --- the ACL vulnerability: john can write /usr/bin/grep, which the cron executes ---
+- name: Grant john rwx ACL on /usr/bin/grep
+  ansible.posix.acl:
+    path: "{{ acl_binary }}"
+    entity: john
+    etype: user
+    permissions: rwx
+    state: present

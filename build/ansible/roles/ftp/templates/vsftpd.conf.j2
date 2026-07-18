@@ -1,0 +1,18 @@
+listen=YES
+listen_port={{ ftp_port }}
+anonymous_enable=YES
+no_anon_password=YES
+anon_world_readable_only=YES
+write_enable=NO
+local_enable=NO
+anon_root=/srv/ftp
+dirmessage_enable=YES
+use_localtime=YES
+xferlog_enable=YES
+xferlog_std_format=YES
+connect_from_port_20=YES
+chroot_local_user=YES
+ssl_enable=NO
+# Passive mode intentionally disabled; clients must use active mode (the classic
+# `ftp` client does by default). Documented in the writeup.
+pasv_enable=NO

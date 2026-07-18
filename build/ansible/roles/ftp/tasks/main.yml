@@ -1,0 +1,32 @@
+---
+- name: Configure vsftpd
+  ansible.builtin.template:
+    src: vsftpd.conf.j2
+    dest: /etc/vsftpd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart vsftpd
+
+- name: Ensure anon ftp root exists
+  ansible.builtin.file:
+    path: /srv/ftp
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Plant the temporary-passwords file (ID2 = mmcarTney+0's password)
+  ansible.builtin.template:
+    src: temporary_pass.txt.j2
+    dest: /srv/ftp/temporary_pass.txt
+    owner: root
+    group: root
+    mode: "0644"
+  no_log: true
+
+- name: Enable vsftpd
+  ansible.builtin.service:
+    name: vsftpd
+    enabled: true
+    state: started

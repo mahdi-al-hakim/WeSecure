@@ -1,0 +1,15 @@
+---
+- name: Ensure ssh-keygen + python present
+  ansible.builtin.apt:
+    name: [openssh-client, python3]
+    state: present
+
+- name: Generate john's key + fragment it into the activity log
+  ansible.builtin.script: gen_foothold.sh
+  environment:
+    PASSPHRASE: "{{ john_key_passphrase }}"
+    KEYCMT: "{{ john_key_comment }}"
+    LOGPATH: "{{ activity_log }}"
+  args:
+    creates: "{{ activity_log }}"
+  no_log: true

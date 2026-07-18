@@ -1,0 +1,83 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ wesecure_hostname }}"
+
+- name: Ensure hostname in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 {{ wesecure_hostname }}"
+    state: present
+
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - vsftpd
+      - openssh-server
+      - acl                    # setfacl (the grep ACL vuln)
+      - cron
+      - libarchive-zip-perl    # provides /usr/bin/crc32 (used by verified_run.sh)
+      - steghide               # build-time: embed the tracker into the cover image
+      - exiftool               # build-time: set the PDF metadata leak
+      - gcc                    # compile .escape from source
+      - ufw
+    update_cache: true
+    state: present
+  register: apt_install
+  until: apt_install is succeeded
+  retries: 3
+  delay: 10
+
+# --- SSH on 2222, root login disabled (intended: only the cron->.escape path to root) ---
+- name: Configure sshd (port 2222, no root login)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-wesecure.conf
+    content: |
+      Port {{ ssh_port }}
+      PermitRootLogin no
+      PasswordAuthentication yes
+    owner: root
+    group: root
+    mode: "0644"
+
+# Ubuntu 24.04 socket-activates SSH on :22 via ssh.socket; a custom Port in
+# sshd_config is ignored until the socket is disabled and ssh.service runs.
+- name: Disable ssh.socket (so the custom Port 2222 takes effect)
+  ansible.builtin.systemd_service:
+    name: ssh.socket
+    enabled: false
+    state: stopped
+  failed_when: false
+
+- name: Enable and start ssh.service on {{ ssh_port }}
+  ansible.builtin.service:
+    name: ssh
+    enabled: true
+    state: restarted
+
+- name: Ensure cron is enabled and running (drives the priv-esc job)
+  ansible.builtin.service:
+    name: cron
+    enabled: true
+    state: started
+
+# --- ufw: only the three intended services ---
+- name: ufw default deny incoming
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: ufw allow the intended ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ http_port }}"
+    - "{{ ssh_port }}"
+    - "{{ ftp_port }}"
+
+- name: ufw enable
+  community.general.ufw:
+    state: enabled

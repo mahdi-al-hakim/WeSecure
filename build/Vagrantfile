@@ -1,0 +1,25 @@
+# Fast local build/iteration loop for WeSecure.
+#   cd build && vagrant up          # build the box locally
+#   vagrant provision               # re-run Ansible after edits
+#   vagrant destroy -f              # reset
+#
+# Uses a stock Ubuntu 24.04 base box + the same Ansible playbook Packer uses, so
+# you can iterate on the vulns in seconds without a full ISO install.
+Vagrant.configure("2") do |config|
+  config.vm.box      = "bento/ubuntu-24.04"
+  config.vm.hostname = "wesecure"
+  config.vm.network "private_network", type: "dhcp"
+
+  ["vmware_desktop", "virtualbox"].each do |prov|
+    config.vm.provider prov do |v|
+      v.memory = 2048
+      v.cpus   = 2
+    end
+  end
+
+  config.vm.provision "ansible" do |a|
+    a.playbook          = "ansible/site.yml"
+    a.galaxy_role_file  = "ansible/requirements.yml"
+    a.raw_arguments     = ["-e", "@ansible/secrets.yml"]
+  end
+end

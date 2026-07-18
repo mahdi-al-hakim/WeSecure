@@ -1,0 +1,36 @@
+---
+# WeSecure: full provisioning playbook.
+# Turns a clean Ubuntu 24.04 host into the WeSecure boot2root box.
+#
+#   ansible-playbook site.yml -e @secrets.yml
+#
+# Roles run in dependency order. Each role encodes one part of the intended
+# exploit chain (see writeup/WeSecure-walkthrough.md).
+- name: Build WeSecure
+  hosts: wesecure
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Fail early if secrets are not provided
+      ansible.builtin.assert:
+        that:
+          - user_flag is defined and user_flag != "REDACTED_32_hex"
+          - root_flag is defined and root_flag != "REDACTED_32_hex"
+          - pw_mmcartney is defined and pw_mmcartney != "REDACTED_set_me"
+        fail_msg: "Provide -e @secrets.yml (copy from secrets.example.yml and fill it in)."
+
+  roles:
+    - base       # packages, hostname, ufw, sshd on 2222
+    - users      # john / mmcarTney+0 / root_2fa, passwords, root->root_2fa 2FA gate, .escape
+    - web        # apache vhost wesecure.vh, site, PDF metadata leak, .part01 stego image
+    - ftp        # vsftpd :61676 anon, active-mode only, temporary_pass.txt
+    - foothold   # john keypair -> fragmented into /var/log/.activity.trace
+    - privesc    # grep ACL, verified_run/monitor/setup_checksums, cron, checksums
+    - flags      # user.txt / root.txt
+
+  post_tasks:
+    - name: Scrub build artifacts and histories (ship-clean)
+      ansible.builtin.include_role:
+        name: base
+        tasks_from: cleanup

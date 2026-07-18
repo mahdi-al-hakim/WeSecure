@@ -1,0 +1,33 @@
+---
+# Non-secret configuration for the WeSecure build.
+# Secret values (passwords, flags, passkeys) live in secrets.yml (see secrets.example.yml).
+
+wesecure_hostname: wesecure
+wesecure_vhost: wesecure.vh
+wesecure_docroot: /var/www/wesecure
+
+# Service ports (must match ufw + writeup)
+ssh_port: 2222
+http_port: 80
+ftp_port: 61676
+
+# Users (uid/gid fixed to match the published box)
+users:
+  - { name: "john",        uid: 1001, comment: "John" }
+  - { name: "mmcarTney+0", uid: 1002, comment: "M. McCartney" }
+  - { name: "root_2fa",    uid: 1003, comment: "root 2FA gate" }
+
+# Foothold
+john_key_comment: "john@wesecure.com"      # cosmetic authorized_keys comment
+activity_log: /var/log/.activity.trace
+
+# Priv-esc
+checksum_dir: /etc/verified_run/checksums
+acl_binary: /usr/bin/grep                  # john gets rwx here (the intended ACL vuln)
+
+# Stego
+stego_cover: logo_design_concept.jpeg      # cover image shipped in roles/web/files
+stego_tracker_name: PID1678_tracker.txt
+
+# Web path leaked via PDF metadata
+projects_dir: "projects_integration~temporary"

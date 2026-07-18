@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WeSecure - Cybersecurity Agency</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background:#0b0f14; color:#e6edf3; }
+    header { padding: 24px 40px; border-bottom: 1px solid #1e2630; }
+    .logo { font-size: 26px; font-weight: 700; color:#00fa9a; }
+    main { max-width: 860px; margin: 0 auto; padding: 40px; }
+    h2 { color:#00fa9a; }
+    footer { padding: 24px 40px; border-top: 1px solid #1e2630; font-size: 13px; color:#8b949e; }
+    a { color:#00fa9a; }
+  </style>
+</head>
+<body>
+  <header><div class="logo">WeSecure</div></header>
+  <main>
+    <h2 class="home-heading">Welcome to WeSecure</h2>
+    <p>WeSecure is a leading cybersecurity agency committed to safeguarding your digital landscape.</p>
+    <h2 class="about-heading">About WeSecure</h2>
+    <p>WeSecure was founded with a single goal in mind: to deliver world-class cybersecurity
+       services to businesses, governments, and individuals. Our team of passionate security
+       professionals works tirelessly to provide penetration testing, incident response,
+       compliance consulting, and more.</p>
+    <p>With WeSecure by your side, you can focus on innovation, knowing that your organization's
+       security posture is well-guarded against ever-evolving threats in the cyber realm.</p>
+  </main>
+  <footer>
+    &copy; <span id="year"></span> WeSecure. All rights reserved.
+    Read our
+    <a href="/termsofuse/WeSecure_Terms_and_Services.pdf" download="WeSecure_Terms_and_Services.pdf">Terms and Services</a>.
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

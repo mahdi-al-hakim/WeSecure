@@ -1,0 +1,39 @@
+---
+# Ship-clean: remove build/author traces WITHOUT touching the intended
+# challenge log (/var/log/.activity.trace).
+- name: Truncate access/auth logs
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    content: ""
+    force: true
+    owner: root
+    group: root
+    mode: "0640"
+  loop:
+    - /var/log/auth.log
+    - /var/log/syslog
+    - /var/log/apache2/access.log
+    - /var/log/apache2/error.log
+    - /var/log/wtmp
+    - /var/log/btmp
+  failed_when: false
+
+- name: Clear shell histories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /root/.bash_history
+    - /home/john/.bash_history
+    - /home/mmcarTney+0/.bash_history
+    - /home/root_2fa/.bash_history
+
+- name: Vacuum systemd journal
+  ansible.builtin.command: journalctl --rotate --vacuum-time=1s
+  changed_when: false
+  failed_when: false
+
+- name: Reset machine-id-ish cloud-init seed (fresh DHCP identity)
+  ansible.builtin.command: cloud-init clean --logs
+  changed_when: false
+  failed_when: false

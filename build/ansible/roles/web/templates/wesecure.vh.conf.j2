@@ -1,0 +1,17 @@
+<VirtualHost *:80>
+    ServerAdmin tim@{{ wesecure_vhost }}
+    DocumentRoot {{ wesecure_docroot }}
+    ServerName {{ wesecure_vhost }}
+    ServerAlias www.{{ wesecure_vhost }}
+
+    <Directory {{ wesecure_docroot }}>
+        # FollowSymLinks is REQUIRED for the intended root step (symlink /etc/.esc-key
+        # into the web-public .part01 and read it over HTTP). Do not remove.
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/wesecure_error.log
+    CustomLog ${APACHE_LOG_DIR}/wesecure_acces.log combined
+</VirtualHost>

@@ -1,0 +1,211 @@
+---
+- name: Install build-time asset generators
+  ansible.builtin.apt:
+    name: [ghostscript, imagemagick]
+    state: present
+
+# --- vhost ---
+- name: Deploy wesecure.vh vhost
+  ansible.builtin.template:
+    src: wesecure.vh.conf.j2
+    dest: /etc/apache2/sites-available/wesecure.vh.conf
+    mode: "0644"
+  notify: restart apache2
+
+- name: Enable wesecure.vh site
+  ansible.builtin.command: a2ensite wesecure.vh
+  args:
+    creates: /etc/apache2/sites-enabled/wesecure.vh.conf
+  notify: restart apache2
+
+- name: Disable the default site (else it also answers to the global ServerName)
+  ansible.builtin.command: a2dissite 000-default
+  args:
+    removes: /etc/apache2/sites-enabled/000-default.conf
+  notify: restart apache2
+
+- name: Set global ServerName (suppress FQDN warning)
+  ansible.builtin.lineinfile:
+    path: /etc/apache2/apache2.conf
+    line: "ServerName {{ wesecure_vhost }}"
+    state: present
+  notify: restart apache2
+
+- name: Map vhost in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 {{ wesecure_vhost }}"
+    state: present
+
+# --- docroot skeleton (owned www-data) ---
+- name: Create docroot
+  ansible.builtin.file:
+    path: "{{ wesecure_docroot }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Landing page
+  ansible.builtin.copy:
+    src: index.html
+    dest: "{{ wesecure_docroot }}/index.html"
+    owner: root
+    group: root
+    mode: "0644"
+
+# --- Terms PDF with the metadata leak ---
+- name: Create termsofuse dir
+  ansible.builtin.file:
+    path: "{{ wesecure_docroot }}/termsofuse"
+    state: directory
+    owner: root
+    group: root_2fa
+    mode: "0775"
+
+- name: Ship PostScript source for the PDF
+  ansible.builtin.copy:
+    src: terms.ps
+    dest: /tmp/terms.ps
+    mode: "0644"
+
+- name: Render PDF from PostScript
+  ansible.builtin.command: ps2pdf /tmp/terms.ps {{ wesecure_docroot }}/termsofuse/WeSecure_Terms_and_Services.pdf
+  args:
+    creates: "{{ wesecure_docroot }}/termsofuse/WeSecure_Terms_and_Services.pdf"
+
+- name: Inject the leaking Keywords metadata (the intended foothold hint)
+  ansible.builtin.command: >
+    exiftool -overwrite_original
+    -Keywords="Cybersecurity, Compliance, Sandbox, TemporaryStorage, /{{ projects_dir }}/"
+    -Author="WeSecure Cybersecurity Agency"
+    -Title="WeSecure Terms and Services Agreement"
+    {{ wesecure_docroot }}/termsofuse/WeSecure_Terms_and_Services.pdf
+  changed_when: true
+
+- name: Fix PDF ownership
+  ansible.builtin.file:
+    path: "{{ wesecure_docroot }}/termsofuse/WeSecure_Terms_and_Services.pdf"
+    owner: root
+    group: root_2fa
+    mode: "0664"
+
+# --- projects_integration~temporary/ (leaked dir) ---
+- name: Create leaked projects dir
+  ansible.builtin.file:
+    path: "{{ wesecure_docroot }}/{{ projects_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Projects index (names 'john' in an HTML comment)
+  ansible.builtin.copy:
+    src: projects_index.html
+    dest: "{{ wesecure_docroot }}/{{ projects_dir }}/index.html"
+    owner: root
+    group: root
+    mode: "0644"
+
+# Disable auto-indexing at the docroot and projects levels so only .part01 is
+# listable. The vhost enables Options Indexes globally; these .htaccess files
+# scope it back down, so the intended path (PDF metadata leak, then fuzzing) is
+# the only way to discover .part01.
+- name: Disable directory listing above .part01
+  ansible.builtin.copy:
+    src: noindex.htaccess
+    dest: "{{ item }}/.htaccess"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - "{{ wesecure_docroot }}"
+    - "{{ wesecure_docroot }}/{{ projects_dir }}"
+
+# --- .part01: mmcarTney-owned, HTTP-listable, holds the stego image ---
+- name: Create .part01 (owned by mmcarTney+0, the symlink-write vector)
+  ansible.builtin.file:
+    path: "{{ wesecure_docroot }}/{{ projects_dir }}/.part01"
+    state: directory
+    owner: "mmcarTney+0"
+    group: "mmcarTney+0"
+    mode: "0755"
+
+- name: .part01 directory listing enabled
+  ansible.builtin.copy:
+    src: part01.htaccess
+    dest: "{{ wesecure_docroot }}/{{ projects_dir }}/.part01/.htaccess"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: .part01 temp.js
+  ansible.builtin.copy:
+    src: temp.js
+    dest: "{{ wesecure_docroot }}/{{ projects_dir }}/.part01/temp.js"
+    owner: "mmcarTney+0"
+    group: "mmcarTney+0"
+    mode: "0644"
+
+- name: Write the steg tracker payload (reveals the username)
+  ansible.builtin.copy:
+    dest: /tmp/{{ stego_tracker_name }}
+    content: |
+      Tracker PID: 1678
+      File Name: {{ stego_cover }}
+      Creator: mmcarTney+0
+    mode: "0644"
+
+- name: Generate a high-capacity cover image
+  ansible.builtin.command: convert -size 640x480 plasma:fractal -quality 90 /tmp/cover.jpg
+  args: { creates: /tmp/cover.jpg }
+
+- name: Embed the tracker into the cover via steghide (passphrase from secrets)
+  ansible.builtin.command: >
+    steghide embed -cf /tmp/cover.jpg -ef /tmp/{{ stego_tracker_name }}
+    -p "{{ stego_passphrase }}" -sf {{ wesecure_docroot }}/{{ projects_dir }}/.part01/{{ stego_cover }} -f
+  args: { creates: "{{ wesecure_docroot }}/{{ projects_dir }}/.part01/{{ stego_cover }}" }
+  no_log: true
+
+- name: Fix stego image ownership + remove build temp payloads
+  block:
+    - ansible.builtin.file:
+        path: "{{ wesecure_docroot }}/{{ projects_dir }}/.part01/{{ stego_cover }}"
+        owner: "mmcarTney+0"
+        group: "mmcarTney+0"
+        mode: "0644"
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/cover.jpg
+        - /tmp/{{ stego_tracker_name }}
+        - /tmp/terms.ps
+
+# Inert decoy / leftover paths, reproduced only for byte-parity with the
+# published OVA. They are empty and not web-readable (0700 root, or a 0-byte
+# .env), so they add no attack surface; they exist so a rebuild matches the
+# shipped image exactly.
+- name: Recreate the OVA's empty, non-readable leftover directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ wesecure_docroot }}/js",     mode: "0700" }
+    - { path: "{{ wesecure_docroot }}/dir",    mode: "0700" }
+    - { path: "{{ wesecure_docroot }}/images", mode: "0700" }
+    - { path: "{{ wesecure_docroot }}/{{ projects_dir }}/js",     mode: "0700" }
+    - { path: "{{ wesecure_docroot }}/{{ projects_dir }}/assets", mode: "0700" }
+    - { path: "{{ wesecure_docroot }}/{{ projects_dir }}/.part02", mode: "0755" }
+
+- name: Recreate the OVA's empty .env leftover
+  ansible.builtin.copy:
+    dest: "{{ wesecure_docroot }}/{{ projects_dir }}/.env"
+    content: ""
+    owner: root
+    group: root
+    mode: "0600"
+    force: false
