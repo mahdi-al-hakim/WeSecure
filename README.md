@@ -6,6 +6,8 @@ A self-authored Linux boot-to-root machine, built as reproducible infrastructure
 
 **Difficulty:** Medium · **Flags:** user + root · **Format:** OVA (VMware / VirtualBox)
 
+**[Download the OVA](https://drive.google.com/file/d/1HtahWLvwFsDsmQE840_BPT0CtHN5nzc9/view?usp=sharing)** · **[Writeup](writeup/WeSecure-walkthrough.md)** (spoilers) · **[Full attack chain](writeup/attack-chain.md)** (spoilers)
+
 ## What this project demonstrates
 
 - **Challenge and range design.** The box is authored, not solved: a self-contained environment with an intended, tested exploitation path and no known shortcuts.
@@ -29,29 +31,13 @@ Two ideas anchor the escalation. The concrete exploitation lives in the writeup;
 
 ## Attack chain
 
-Each step turns one reasonable-looking control against the next; the two anchor principles above appear as the labelled edges in privilege escalation.
+At a high level the box moves through four phases, each defeating one control to reach the next. The two anchor principles above are the privilege-escalation edges. This view is intentionally abstract; the full step-by-step chain, with the specific services and misconfigurations, is in [the attack-chain diagram](writeup/attack-chain.md) (spoilers).
 
 ```mermaid
-flowchart TD
-    subgraph recon [Recon]
-        N["nmap -p-"] --> FTP["FTP · anonymous"]
-        N --> WEB["HTTP · wesecure.vh"]
-        FTP -->|"temp-password file left on the server"| CRED["temporary passwords"]
-        WEB -->|"PDF metadata leaks a hidden path"| DIR["work-in-progress web dir"]
-        DIR -->|"passkey-guarded steganography"| WHO["username discovered"]
-    end
-    subgraph foothold [Foothold]
-        CRED --> S1["SSH as mmcarTney+0"]
-        WHO --> S1
-        S1 -->|"SSH key fragmented across a readable log"| KEY["reassemble + crack key"]
-        KEY --> USER["SSH as john · user.txt"]
-    end
-    subgraph privesc [Privilege escalation]
-        USER -->|"ACL write on a cron-trusted binary"| G["hijack grep"]
-        G -->|"CRC32 forged: a checksum is not an integrity control"| R2["shell as root_2fa"]
-        R2 -->|"SUID reader + web-writable dir = confused deputy"| LEAK["leak the 2FA passkey over HTTP"]
-        LEAK --> ROOT[".escape passkey · root · root.txt"]
-    end
+flowchart LR
+    R["Recon<br/>web · FTP · SSH"] --> F["Foothold<br/>user.txt"]
+    F -->|"a checksum is not an integrity control"| P["Privilege escalation"]
+    P -->|"a confused deputy leaks the last secret"| Root["root<br/>root.txt"]
 ```
 
 ## Attack surface

