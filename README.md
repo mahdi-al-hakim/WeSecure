@@ -2,11 +2,11 @@
 
 A self-authored Linux boot-to-root machine, built as reproducible infrastructure. It presents a multi-stage attack chain in which each step turns one reasonable-looking control against the next, and it ships with a full technical writeup and a Packer/Ansible build that reconstructs the machine from source.
 
-![WeSecure landing page](screenshots/landing.png)
-
 **Difficulty:** Medium · **Flags:** user + root · **Format:** OVA (VMware / VirtualBox)
 
 **[Download the OVA](https://drive.google.com/file/d/1HtahWLvwFsDsmQE840_BPT0CtHN5nzc9/view?usp=sharing)** · **[Writeup](writeup/WeSecure-walkthrough.md)** (spoilers) · **[Full attack chain](writeup/attack-chain.md)** (spoilers)
+
+![WeSecure landing page](screenshots/landing.png)
 
 ## What this project demonstrates
 
