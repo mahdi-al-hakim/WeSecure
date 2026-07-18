@@ -20,8 +20,6 @@ A self-authored Linux boot-to-root machine, built as reproducible infrastructure
 
 WeSecure is themed around a fictional security firm. It rewards methodical enumeration and the chaining of small, realistic misconfigurations over any single exploit: recon to a foothold, the user flag, then a privilege-escalation chain to root. The design question is deliberately narrow: what happens when every control in a stack is individually reasonable but collectively defeatable?
 
-The same reasoning, composing primitives so each defeats a specific control to reach the next, is how agentic and LLM tool pipelines tend to fail. That parallel is part of why I built it.
-
 ## Design notes (defensive takeaways)
 
 Two ideas anchor the escalation. The concrete exploitation lives in the writeup; the principles worth keeping are:
