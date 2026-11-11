@@ -22,8 +22,8 @@ WeSecure is themed around a fictional security firm. It rewards methodical enume
 
 Two ideas anchor the escalation. The exploitation details are in the writeup.
 
-- **Checksums don't stop an attacker.** A CRC detects accidental corruption, but an attacker who can recompute it can forge it. Integrity that has to survive an attacker needs a keyed signature, such as an HMAC or code signing.
-- **A more privileged service can leak what you can't read.** A value that is safe under its own permissions becomes reachable when a separate, more privileged service can be induced to read it on the requester's behalf.
+- **Forged CRC32.** A CRC detects accidental corruption, but an attacker who can recompute it can forge it. Integrity that has to survive an attacker needs a keyed signature, such as an HMAC or code signing.
+- **Confused deputy.** A value that is safe under its own permissions becomes reachable when a separate, more privileged service can be induced to read it on the requester's behalf.
 
 ## Attack chain
 
@@ -78,7 +78,7 @@ CertUtil -hashfile WeSecure.ova SHA256    # Windows
 5. Find the machine's IP from your attacking host with `netdiscover` or `arp-scan`.
 6. Add the web vhost to your hosts file (see below), then begin.
 
-The site is served on the `wesecure.vh` virtual host; add `<target_ip> wesecure.vh` to `/etc/hosts`. FTP is active-mode only, so use the `ftp` client rather than passive-only tools such as curl or a browser.
+The site is served on the `wesecure.vh` virtual host; add `<target_ip> wesecure.vh` to `/etc/hosts`. FTP is active-mode only. Use the `ftp` client or `curl -P -`; clients that only use passive mode will fail.
 
 ## Tested on
 

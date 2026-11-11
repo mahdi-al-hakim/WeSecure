@@ -1,7 +1,7 @@
 #cloud-config
 # Ubuntu 24.04 autoinstall seed for the Packer build box.
-# Creates a throwaway `ubuntu`/`ubuntu` admin used only during the build; the
-# Ansible run and cleanup remove build traces afterward.
+# Creates a throwaway `ubuntu`/`ubuntu` admin used only during the build. Packer's
+# shutdown command deletes it, and the Ansible cleanup removes other build traces.
 autoinstall:
   version: 1
   locale: en_US.UTF-8

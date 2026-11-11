@@ -39,7 +39,8 @@ source "vmware-iso" "wesecure" {
   ssh_password           = "ubuntu"
   ssh_timeout            = "45m"
   ssh_handshake_attempts = "100"
-  shutdown_command       = "echo 'ubuntu' | sudo -S shutdown -P now"
+  # Delete the build user on the way out, so the image has no ubuntu/ubuntu sudo login.
+  shutdown_command       = "echo 'ubuntu' | sudo -S sh -c 'userdel -f -r ubuntu; rm -f /etc/sudoers.d/ubuntu; shutdown -P now'"
   vmx_data = {
     "ethernet0.connectionType" = "nat"   # DHCP, portable (no host-only hardcoding)
   }
