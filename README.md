@@ -8,34 +8,32 @@ A self-authored Linux boot-to-root machine, built as reproducible infrastructure
 
 ![WeSecure landing page](screenshots/landing.png)
 
-## What this project demonstrates
+## What's here
 
-- **Challenge and range design.** The box is authored, not solved: a self-contained environment with an intended, tested exploitation path and no known shortcuts.
-- **Reproducible security infrastructure.** Packer builds the base image and Ansible introduces each vulnerability as a discrete role, so the whole machine rebuilds from code.
-- **Multi-stage exploitation reasoning.** A chain from anonymous recon to root where each primitive defeats a specific control to unlock the next.
-- **Trust-boundary and integrity thinking.** The escalation turns on a control that checks the wrong property, and on privileges that compose into an exposure neither owner intended.
-- **Clear technical communication.** A reproducible, step-by-step writeup with a defensive takeaway for every finding.
+- **The machine**, as an OVA for VMware or VirtualBox. The download link and its checksum are [below](#download).
+- **The build.** Packer builds the base image and Ansible adds each vulnerability as its own role, so the machine rebuilds from code. See [`build/`](build/README.md).
+- **The writeup**: the intended path from anonymous recon to root, with a defensive takeaway for each finding. [Walkthrough](writeup/WeSecure-walkthrough.md) and [attack chain](writeup/attack-chain.md), both spoilers.
 
 ## About
 
-WeSecure is themed around a fictional security firm. It rewards methodical enumeration and the chaining of small, realistic misconfigurations over any single exploit: recon to a foothold, the user flag, then a privilege-escalation chain to root. The design question is deliberately narrow: what happens when every control in a stack is individually reasonable but collectively defeatable?
+WeSecure is themed around a fictional security firm. It rewards methodical enumeration and chaining small, realistic misconfigurations: recon to a foothold, the user flag, then a privilege-escalation chain to root. Each control on the box is reasonable on its own, and the chain works because of how they combine.
 
 ## Design notes (defensive takeaways)
 
-Two ideas anchor the escalation. The concrete exploitation lives in the writeup; the principles worth keeping are:
+Two ideas anchor the escalation. The exploitation details are in the writeup.
 
-- **A checksum is not an integrity control.** A CRC detects accidental corruption, not a deliberate forgery by an adversary who can recompute it. Integrity that has to survive an attacker needs a keyed signature such as HMAC or code signing.
-- **A confused deputy leaks the last secret.** A value that is safe under its own permissions becomes reachable when a separate, more-privileged service can be induced to read it on the requester's behalf. Isolated privileges still compose into exposure.
+- **Checksums don't stop an attacker.** A CRC detects accidental corruption, but an attacker who can recompute it can forge it. Integrity that has to survive an attacker needs a keyed signature, such as an HMAC or code signing.
+- **A more privileged service can leak what you can't read.** A value that is safe under its own permissions becomes reachable when a separate, more privileged service can be induced to read it on the requester's behalf.
 
 ## Attack chain
 
-At a high level the box moves through four phases, each defeating one control to reach the next. The two anchor principles above are the privilege-escalation edges. This view is intentionally abstract; the full step-by-step chain, with the specific services and misconfigurations, is in [the attack-chain diagram](writeup/attack-chain.md) (spoilers).
+At a high level the box moves through four phases, each defeating one control to reach the next. The two ideas above are the privilege-escalation edges. This view is intentionally abstract; the full step-by-step chain, with the specific services and misconfigurations, is in [the attack-chain diagram](writeup/attack-chain.md) (spoilers).
 
 ```mermaid
 flowchart LR
     R["Recon<br/>web · FTP · SSH"] --> F["Foothold<br/>user.txt"]
-    F -->|"a checksum is not an integrity control"| P["Privilege escalation"]
-    P -->|"a confused deputy leaks the last secret"| Root["root<br/>root.txt"]
+    F -->|"forged CRC32 checksum"| P["Privilege escalation"]
+    P -->|"confused deputy"| Root["root<br/>root.txt"]
 ```
 
 ## Attack surface
@@ -95,7 +93,7 @@ Exported with `ovftool` 4.6.2 (compressed, no install media attached).
 
 The machine is defined as code in [`build/`](build/): Packer builds a clean Ubuntu 24.04 image, Ansible introduces each vulnerability as a role mapped to one stage of the chain, and the result is exported as an OVA. A `Vagrantfile` gives a fast local loop. Details in [`build/README.md`](build/README.md).
 
-Defining the box as code, rather than shipping only an opaque image, keeps it repeatable, version-controlled, and easy to vary. Those are the same properties an automated security-testing environment needs.
+Defining the box as code, and not only shipping an image, keeps it repeatable, version-controlled and easy to vary.
 
 ```bash
 cp build/ansible/secrets.example.yml build/ansible/secrets.yml   # set passwords and flags

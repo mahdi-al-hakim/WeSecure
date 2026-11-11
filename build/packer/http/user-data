@@ -14,7 +14,7 @@ autoinstall:
     hostname: wesecure-build
     username: ubuntu
     # SHA-512 crypt of "ubuntu" (regenerate with:  openssl passwd -6 ubuntu)
-    password: "$6$U1rw96xBdFGr6dna$doPIYy18x//6LZMha/vEjjWTvEoYAOAnAomfKD6wYaIlvjrQ6k4F0X64ffs8Wb19FOpoXvxopRK0.bu9KkTe/"
+    password: "$6$U1rw96xBdFGr6dna$doPIYy18x//6LZMha/vEjjWTvEoYAOAnAomfKD6wYaIlvjrQ6k4F0X64ffs8Wb19FOpoXvxopRK0.bu9KkTe//"
   ssh:
     install-server: true
     allow-pw: true

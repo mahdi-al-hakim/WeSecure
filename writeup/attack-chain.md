@@ -2,7 +2,7 @@
 
 > Full spoilers. This maps the intended path end to end. Read it after your own attempt, or alongside the [walkthrough](WeSecure-walkthrough.md).
 
-Each edge is the control or oversight that turns one step into the next. The two labelled edges in privilege escalation are the box's anchor ideas: a checksum is not an integrity control, and a confused deputy leaks the last secret.
+Each edge is the control or oversight that turns one step into the next. The two privilege-escalation edges carry the box's two ideas: a CRC32 checksum can be forged by anyone who can recompute it, and a more privileged service can be made to read a secret on your behalf.
 
 ```mermaid
 flowchart TD
@@ -21,7 +21,7 @@ flowchart TD
     end
     subgraph privesc [Privilege escalation]
         USER -->|"ACL write on a cron-trusted binary"| G["hijack grep"]
-        G -->|"CRC32 forged: a checksum is not an integrity control"| R2["shell as root_2fa"]
+        G -->|"CRC32 checksum forged"| R2["shell as root_2fa"]
         R2 -->|"SUID reader + web-writable dir = confused deputy"| LEAK["leak the 2FA passkey over HTTP"]
         LEAK --> ROOT[".escape passkey · root · root.txt"]
     end
