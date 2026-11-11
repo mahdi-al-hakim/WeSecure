@@ -16,7 +16,7 @@ A self-authored Linux boot-to-root machine, built as reproducible infrastructure
 
 ## About
 
-WeSecure is themed around a fictional security firm. It rewards methodical enumeration and chaining small, realistic misconfigurations: recon to a foothold, the user flag, then a privilege-escalation chain to root. Each control on the box is reasonable on its own, and the chain works because of how they combine.
+WeSecure is themed around a fictional security firm. It rewards methodical enumeration and chaining small, realistic misconfigurations: recon to a foothold, the user flag, then a privilege-escalation chain to root.
 
 ## Design notes (defensive takeaways)
 
@@ -27,7 +27,7 @@ Two ideas anchor the escalation. The exploitation details are in the writeup.
 
 ## Attack chain
 
-At a high level the box moves through four phases, each defeating one control to reach the next. The two ideas above are the privilege-escalation edges. This view is intentionally abstract; the full step-by-step chain, with the specific services and misconfigurations, is in [the attack-chain diagram](writeup/attack-chain.md) (spoilers).
+At a high level the box moves through four phases, each defeating one control to reach the next. The two ideas above are the privilege-escalation edges. The full step-by-step chain, with the specific services and misconfigurations, is in [the attack-chain diagram](writeup/attack-chain.md) (spoilers).
 
 ```mermaid
 flowchart LR
@@ -92,8 +92,6 @@ Exported with `ovftool` 4.6.2 (compressed, no install media attached).
 ## Build
 
 The machine is defined as code in [`build/`](build/): Packer builds a clean Ubuntu 24.04 image, Ansible introduces each vulnerability as a role mapped to one stage of the chain, and the result is exported as an OVA. A `Vagrantfile` gives a fast local loop. Details in [`build/README.md`](build/README.md).
-
-Defining the box as code, and not only shipping an image, keeps it repeatable, version-controlled and easy to vary.
 
 ```bash
 cp build/ansible/secrets.example.yml build/ansible/secrets.yml   # set passwords and flags
